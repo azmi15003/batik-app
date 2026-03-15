@@ -11,7 +11,6 @@ import {
   Search,
   Menu,
   X,
-  ChevronRight
 } from 'lucide-vue-next'
 
 const activeTab = ref('orders')
