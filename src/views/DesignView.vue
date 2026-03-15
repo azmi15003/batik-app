@@ -406,18 +406,6 @@ const togglePanel = (panel: string) => {
                     <div v-if="selectedSize.name === size.name" class="w-2.5 lg:w-3 h-2.5 lg:h-3 bg-[#3b4a8b] rounded-full shadow-lg shadow-[#3b4a8b]/30"></div>
                   </button>
                 </div>
-
-                <div class="mt-8 lg:mt-12 bg-white p-6 lg:p-8 rounded-[24px] lg:rounded-[32px] text-white shadow-2xl relative overflow-hidden group shrink-0">
-                  <div class="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-3xl -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-700"></div>
-                  <p class="text-[9px] lg:text-[10px] font-black text-[#c5a47e] uppercase tracking-[0.2em] mb-3">Order Specs</p>
-                  <div class="flex items-baseline text-[#313a5b] gap-2 mb-6 text-xl lg:text-2xl font-black">
-                    <span>Rp 315.000</span>
-                    <span class="text-[9px] lg:text-[10px] text-slate-500 font-bold uppercase tracking-widest">/ meter</span>
-                  </div>
-                  <button @click="router.push('/checkout')" class="w-full py-4 bg-[#313a5b] text-white font-black rounded-xl lg:rounded-2xl hover:bg-[#d4b58f] transition-all active:scale-95 shadow-lg shadow-[#c5a47e]/10 uppercase tracking-widest text-[10px] lg:text-xs">
-                    Confirm & Checkout
-                  </button>
-                </div>
               </div>
             </div>
           </div>

@@ -127,7 +127,7 @@ const features = [
           <div class="relative w-full max-w-[280px] sm:max-w-md">
             <div class="absolute inset-0 bg-gradient-to-tr from-[#3b4a8b] to-[#c5a47e] rounded-[2rem] lg:rounded-[3rem] rotate-6 scale-95 opacity-20 blur-xl lg:blur-2xl"></div>
             <div class="relative bg-white border border-slate-200 lg:p rounded-[2rem] lg:rounded-[3rem] shadow-2xl rotate-2 hover:rotate-0 transition-transform duration-700">
-               <img src="/src/assets/motifs/megamendung.png" class="w-full aspect-square object-cover rounded-2xl lg:rounded-[2rem]" />
+               <img src="/motifs/megamendung.png" class="w-full aspect-square object-cover rounded-2xl lg:rounded-[2rem]" />
             </div>
           </div>
         </div>

@@ -23,8 +23,8 @@ const products = [
 ]
 
 const recentDesigns = [
-  { id: 'r1', name: 'Megamendung Premium', date: '01/01/2026, 18:43', image: '/src/assets/motifs/megamendung.png' },
-  { id: 'r2', name: 'Fractal Azure', date: '02/01/2026, 10:15', image: '/src/assets/motifs/fractal.png' }
+  { id: 'r1', name: 'Megamendung Premium', date: '01/01/2026, 18:43', image: '/motifs/megamendung.png' },
+  { id: 'r2', name: 'Fractal Azure', date: '02/01/2026, 10:15', image: '/motifs/fractal.png' }
 ]
 
 const selectedCategory = ref('scarf')

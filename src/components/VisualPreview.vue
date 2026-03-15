@@ -1,13 +1,16 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { X, ZoomIn, ZoomOut, Maximize2, Info } from 'lucide-vue-next'
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
 
 defineProps<{
   show: boolean
   imageUrl: string
 }>()
 
-defineEmits(['close'])
+const emit = defineEmits(['close'])
 
 const scale = ref(1)
 const position = ref({ x: 0, y: 0 })
@@ -55,13 +58,22 @@ const zoomIn = () => {
 const zoomOut = () => {
   scale.value = Math.max(scale.value - 0.2, 0.5)
 }
+
+const goToCheckout = () => {
+  emit('close')
+  // Use timeout to ensure the modal state is cleared if needed, 
+  // and handle potential router transition delay.
+  setTimeout(() => {
+    router.push('/checkout')
+  }, 100)
+}
 </script>
 
 <template>
   <div v-if="show" class="fixed inset-0 z-[100] flex items-center justify-center p-0 sm:p-4">
     <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-xl" @click="$emit('close')"></div>
     
-    <div class="relative bg-white w-full h-full lg:h-auto lg:max-w-6xl lg:rounded-[40px] shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 lg:zoom-in duration-300 border-slate-200 flex flex-col lg:max-h-[90vh]">
+    <div class="relative bg-white w-full h-full lg:h-[85vh] lg:max-w-6xl lg:rounded-[40px] shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 lg:zoom-in duration-300 border-slate-200 flex flex-col">
       <!-- Responsive Header -->
       <div class="flex items-center justify-between p-6 lg:p-8 border-b border-slate-100 shrink-0 z-10 bg-white/80 backdrop-blur">
         <div class="flex flex-col">
@@ -125,38 +137,69 @@ const zoomOut = () => {
         <!-- Info Panel (Drawer on Mobile) -->
         <aside 
           :class="isInfoOpen ? 'translate-y-0' : 'translate-y-full lg:translate-y-0'"
-          class="absolute lg:relative bottom-0 inset-x-0 lg:inset-auto lg:w-96 bg-white shrink-0 z-20 transition-transform duration-300 lg:border-l border-slate-200 shadow-[0_-20px_50px_rgba(0,0,0,0.1)] lg:shadow-none rounded-t-[40px] lg:rounded-none flex flex-col max-h-[70%] lg:max-h-full"
+          class="absolute lg:relative bottom-0 inset-x-0 lg:inset-auto lg:w-96 bg-white shrink-0 z-20 transition-transform duration-300 lg:border-l border-slate-200 shadow-[0_-20px_50px_rgba(0,0,0,0.1)] lg:shadow-none rounded-t-[40px] lg:rounded-none flex flex-col h-[90%] lg:h-full overflow-hidden"
         >
-          <div class="flex-grow p-8 lg:p-10 overflow-y-auto space-y-8">
-            <div class="lg:hidden w-12 h-1.5 bg-slate-100 rounded-full mx-auto mb-4" @click="isInfoOpen = false"></div>
+          <!-- Compact Info Section -->
+          <div class="flex-grow overflow-y-auto p-6 lg:p-8 space-y-6 min-h-0">
+            <div class="lg:hidden w-12 h-1.5 bg-slate-100 rounded-full mx-auto mb-2" @click="isInfoOpen = false"></div>
             
-            <div class="space-y-4">
-              <h4 class="text-xl font-black text-slate-900 font-black">Specs Detail</h4>
-              <p class="text-[13px] text-slate-500 font-bold leading-relaxed">
-                Render simulasi ini menggunakan profile warna kain Cotton Primisima asli untuk hasil yang paling akurat sebelum naik cetak.
+            <div class="space-y-3">
+              <h4 class="text-base font-black text-slate-900 uppercase tracking-tight">Specs Detail</h4>
+              <p class="text-[11px] lg:text-[12px] text-slate-500 font-bold leading-relaxed">
+                Render simulasi menggunakan profile kain Cotton Primisima asli untuk hasil akurat.
               </p>
             </div>
             
-            <div class="grid grid-cols-2 lg:grid-cols-1 gap-4">
-              <div class="bg-slate-50 p-6 rounded-3xl border border-slate-100 shadow-sm">
-                <span class="block text-[9px] font-black text-[#c5a47e] uppercase tracking-widest mb-1.5">Material</span>
-                <span class="text-base font-black text-slate-800">Fine Cotton</span>
+            <!-- Horizontal Mini Cards -->
+            <div class="grid grid-cols-2 gap-3">
+              <div class="bg-slate-50 p-4 rounded-xl border border-slate-100">
+                <span class="block text-[8px] font-black text-[#c5a47e] uppercase tracking-widest mb-1">Material</span>
+                <span class="text-[11px] lg:text-xs font-black text-slate-800">Fine Cotton</span>
               </div>
-              <div class="bg-indigo-50/30 p-6 rounded-3xl border border-indigo-100 shadow-sm">
-                <span class="block text-[9px] font-black text-[#3b4a8b] uppercase tracking-widest mb-1.5">Simulation</span>
-                <span class="text-base font-black text-slate-800">4x Precision</span>
+              <div class="bg-indigo-50/30 p-4 rounded-xl border border-indigo-100">
+                <span class="block text-[8px] font-black text-[#3b4a8b] uppercase tracking-widest mb-1">Precision</span>
+                <span class="text-[11px] lg:text-xs font-black text-slate-800">4x Simulation</span>
               </div>
             </div>
 
-            <p class="text-[11px] font-bold text-slate-400 italic">
-              "Pastikan motif terlihat harmonis saat di-zoom. Desain Anda adalah warisan baru."
-            </p>
+            <div class="p-4 bg-slate-50 rounded-xl border border-dashed border-slate-200">
+               <span class="block text-[8px] font-black text-slate-400 uppercase tracking-widest mb-2">Technical Summary</span>
+               <p class="text-[10px] font-bold text-slate-500 leading-normal">
+                 "Pastikan motif terlihat harmonis saat di-zoom. Desain Anda adalah warisan baru."
+               </p>
+            </div>
           </div>
           
-          <div class="p-8 lg:p-10 pt-0">
-            <button @click="$emit('close')" class="w-full py-5 bg-[#313a5b] text-white font-black rounded-2xl shadow-xl shadow-[#313a5b]/10 hover:bg-[#3b4a8b] active:scale-95 transition-all text-xs lg:text-sm uppercase tracking-widest">
-              Kembali Mendesain
-            </button>
+          <!-- Integrated Order Section -->
+          <div class="p-6 lg:p-8 border-t border-slate-100 bg-white shrink-0 space-y-5">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-[8px] font-black text-[#c5a47e] uppercase tracking-[0.2em] mb-1">Order Specs</p>
+                <div class="flex items-baseline gap-1">
+                  <span class="text-xl lg:text-2xl font-black text-slate-900">Rp 315K</span>
+                  <span class="text-[8px] text-slate-400 font-bold uppercase tracking-widest">/ meter</span>
+                </div>
+              </div>
+              <div class="text-right">
+                <p class="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Completion</p>
+                <p class="text-[11px] font-black text-slate-800">3-5 Days</p>
+              </div>
+            </div>
+
+            <div class="space-y-3">
+              <button 
+                @click="goToCheckout" 
+                class="w-full p-4 bg-[#313a5b] text-white font-black rounded-2xl shadow-xl shadow-[#313a5b]/20 hover:bg-[#3b4a8b] active:scale-95 transition-all text-xs lg:text-sm uppercase tracking-widest"
+              >
+                Confirm & Checkout
+              </button>
+              <button 
+                @click="$emit('close')" 
+                class="w-full p-4 text-slate-400 hover:text-slate-600 font-black transition-all text-[9px] lg:text-[10px] uppercase tracking-widest"
+              >
+                Kembali Mendesain
+              </button>
+            </div>
           </div>
         </aside>
       </div>

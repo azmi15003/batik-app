@@ -16,10 +16,10 @@ export interface Palette {
 export const useDesignStore = defineStore('design', {
   state: () => ({
     motifs: [
-      { id: '1', name: 'Megamendung', url: '/src/assets/motifs/megamendung.png' },
-      { id: '2', name: 'Garudan', url: '/src/assets/motifs/garudan.png' },
-      { id: '3', name: 'Geometric', url: '/src/assets/motifs/geometric.png' },
-      { id: '4', name: 'Fractal', url: '/src/assets/motifs/fractal.png' },
+      { id: '1', name: 'Megamendung', url: '/motifs/megamendung.png' },
+      { id: '2', name: 'Garudan', url: '/motifs/garudan.png' },
+      { id: '3', name: 'Geometric', url: '/motifs/geometric.png' },
+      { id: '4', name: 'Fractal', url: '/motifs/fractal.png' },
     ] as Motif[],
     palettes: [
       { 
