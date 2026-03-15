@@ -385,14 +385,14 @@ const togglePanel = (panel: string) => {
             </div>
 
             <!-- Layout/Size Panel -->
-            <div v-if="activePanel === 'layout'" class="flex flex-col h-full">
-              <div class="p-6 lg:p-8">
-                <div class="hidden lg:flex items-center justify-between mb-8">
+            <div v-if="activePanel === 'layout'" class="flex flex-col h-full overflow-hidden">
+              <div class="p-6 lg:p-8 flex flex-col h-full">
+                <div class="hidden lg:flex items-center justify-between mb-8 shrink-0">
                   <h3 class="text-lg font-black text-slate-900 uppercase tracking-tight">Product Canvas</h3>
                   <button @click="activePanel = ''" class="p-2 hover:bg-slate-100 rounded-xl transition-colors text-slate-400"><X class="w-5 h-5" /></button>
                 </div>
                 
-                <div class="space-y-3 lg:space-y-4">
+                <div class="space-y-3 lg:space-y-4 flex-grow overflow-y-auto pr-2">
                   <button 
                     v-for="size in canvasSizes" :key="size.name"
                     @click="selectedSize = size"
@@ -407,14 +407,14 @@ const togglePanel = (panel: string) => {
                   </button>
                 </div>
 
-                <div class="mt-8 lg:mt-12 bg-slate-950 p-6 lg:p-8 rounded-[24px] lg:rounded-[32px] text-white shadow-2xl relative overflow-hidden group">
-                  <div class="absolute top-0 right-0 w-32 h-32 bg-[#c5a47e]/10 rounded-full blur-3xl -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-700"></div>
+                <div class="mt-8 lg:mt-12 bg-white p-6 lg:p-8 rounded-[24px] lg:rounded-[32px] text-white shadow-2xl relative overflow-hidden group shrink-0">
+                  <div class="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-3xl -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-700"></div>
                   <p class="text-[9px] lg:text-[10px] font-black text-[#c5a47e] uppercase tracking-[0.2em] mb-3">Order Specs</p>
-                  <div class="flex items-baseline gap-2 mb-6 text-xl lg:text-2xl font-black">
+                  <div class="flex items-baseline text-[#313a5b] gap-2 mb-6 text-xl lg:text-2xl font-black">
                     <span>Rp 315.000</span>
                     <span class="text-[9px] lg:text-[10px] text-slate-500 font-bold uppercase tracking-widest">/ meter</span>
                   </div>
-                  <button @click="router.push('/checkout')" class="w-full py-4 bg-[#c5a47e] text-slate-900 font-black rounded-xl lg:rounded-2xl hover:bg-[#d4b58f] transition-all active:scale-95 shadow-lg shadow-[#c5a47e]/10 uppercase tracking-widest text-[10px] lg:text-xs">
+                  <button @click="router.push('/checkout')" class="w-full py-4 bg-[#313a5b] text-white font-black rounded-xl lg:rounded-2xl hover:bg-[#d4b58f] transition-all active:scale-95 shadow-lg shadow-[#c5a47e]/10 uppercase tracking-widest text-[10px] lg:text-xs">
                     Confirm & Checkout
                   </button>
                 </div>

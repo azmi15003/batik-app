@@ -6,8 +6,7 @@ import {
   Layers, 
   ArrowRight, 
   Sparkles,
-  MousePointer2,
-  Image as ImageIcon,
+  ImageIcon,
   Menu,
   X
 } from 'lucide-vue-next'
@@ -55,12 +54,8 @@ const features = [
         <span class="text-xl lg:text-2xl font-black text-slate-900 tracking-tighter">Batik</span>
       </div>
 
-      <!-- Desktop Menu -->
-      <div class="hidden lg:flex items-center gap-10 text-sm font-black uppercase tracking-widest text-slate-500">
-        <a href="#" class="hover:text-[#3b4a8b] transition-colors">Catalog</a>
-        <a href="#" class="hover:text-[#3b4a8b] transition-colors">Philosophy</a>
-        <a href="#" class="hover:text-[#3b4a8b] transition-colors">Pricing</a>
-      </div>
+      <!-- Nav links removed for simplification -->
+      <div class="hidden lg:flex items-center gap-10"></div>
 
       <div class="flex items-center gap-4">
         <button @click="router.push('/dashboard')" class="hidden sm:block px-6 lg:px-8 py-2.5 lg:py-3 bg-white text-slate-700 font-black rounded-xl border border-slate-200 shadow-sm hover:shadow-md hover:bg-slate-50 transition-all uppercase tracking-widest text-[9px] lg:text-[10px]">
@@ -83,9 +78,7 @@ const features = [
         leave-to-class="opacity-0 translate-y-4"
       >
         <div v-if="isMenuOpen" class="absolute top-20 left-0 right-0 bg-white border-b border-slate-200 p-6 flex flex-col gap-6 lg:hidden shadow-xl z-50">
-          <a href="#" class="text-sm font-black uppercase tracking-widest text-slate-900">Catalog</a>
-          <a href="#" class="text-sm font-black uppercase tracking-widest text-slate-900">Philosophy</a>
-          <a href="#" class="text-sm font-black uppercase tracking-widest text-slate-900">Pricing</a>
+          <!-- Navigation links removed -->
           <button @click="router.push('/dashboard')" class="w-full py-4 bg-slate-50 text-slate-900 font-black rounded-xl border border-slate-200 uppercase tracking-widest text-[10px]">
              Sign in
           </button>
@@ -133,19 +126,8 @@ const features = [
         <div class="w-full lg:w-2/5 flex items-center justify-center mt-12 lg:mt-0">
           <div class="relative w-full max-w-[280px] sm:max-w-md">
             <div class="absolute inset-0 bg-gradient-to-tr from-[#3b4a8b] to-[#c5a47e] rounded-[2rem] lg:rounded-[3rem] rotate-6 scale-95 opacity-20 blur-xl lg:blur-2xl"></div>
-            <div class="relative bg-white border border-slate-200 p-6 lg:p-8 rounded-[2rem] lg:rounded-[3rem] shadow-2xl rotate-2 hover:rotate-0 transition-transform duration-700">
-               <img src="/src/assets/motifs/truntum.svg" class="w-full aspect-square object-contain opacity-80" />
-               <div class="absolute -bottom-6 lg:-bottom-8 -right-6 lg:-right-8 bg-white border border-slate-100 p-4 lg:p-6 rounded-2xl lg:rounded-3xl shadow-2xl shadow-[#3b4a8b]/10 animate-bounce-slow">
-                  <div class="flex items-center gap-3 lg:gap-4">
-                    <div class="w-10 h-10 lg:w-12 h-12 bg-slate-50 rounded-xl lg:rounded-2xl flex items-center justify-center shadow-inner">
-                        <MousePointer2 class="w-5 h-5 lg:w-6 h-6 text-[#3b4a8b]" />
-                    </div>
-                    <div>
-                      <p class="text-[8px] lg:text-[10px] font-black uppercase text-slate-400">Current Tool</p>
-                      <p class="text-xs lg:text-sm font-black text-slate-800">Precision Snap</p>
-                    </div>
-                  </div>
-               </div>
+            <div class="relative bg-white border border-slate-200 lg:p rounded-[2rem] lg:rounded-[3rem] shadow-2xl rotate-2 hover:rotate-0 transition-transform duration-700">
+               <img src="/src/assets/motifs/megamendung.png" class="w-full aspect-square object-cover rounded-2xl lg:rounded-[2rem]" />
             </div>
           </div>
         </div>
@@ -173,7 +155,6 @@ const features = [
         <Sparkles class="w-4 h-4 lg:w-5 h-5 text-slate-900" />
         <span class="text-lg lg:text-xl font-black text-slate-900">Batik</span>
       </div>
-      <p class="text-[8px] lg:text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] text-center px-4">© 2026 Batik Fractal Indonesia. All Rights Reserved.</p>
     </footer>
   </div>
 </template>
