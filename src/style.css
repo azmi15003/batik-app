@@ -1,0 +1,58 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --primary: #3b4a8b; /* Batik Indigo */
+  --primary-dark: #2d3a6d;
+  --secondary: #c5a47e; /* Warm Bronze */
+  --bg-main: #f8f9fa; /* Warm White */
+  --bg-sidebar: #ffffff; /* pure white */
+  --bg-canvas: #ffffff;
+  --border: #e2e8f0;
+  --text-main: #1a202c; /* Deep Slate */
+  --text-muted: #64748b;
+}
+
+@layer base {
+  body {
+    @apply bg-[#f8f9fa] text-slate-900 font-sans antialiased;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply px-4 py-2 bg-[#3b4a8b] text-white rounded-xl hover:bg-[#4a5a9b] transition-all font-bold shadow-lg active:scale-95;
+  }
+  
+  .btn-secondary {
+    @apply px-4 py-2 bg-[#c5a47e] text-white rounded-xl hover:bg-[#d4b58f] transition-all font-bold shadow-lg active:scale-95;
+  }
+  
+  .btn-outline {
+    @apply px-4 py-2 bg-white text-slate-700 rounded-xl hover:bg-slate-50 transition-all font-bold border border-slate-200;
+  }
+
+  .card {
+    @apply bg-white rounded-3xl border border-slate-200 p-6 shadow-xl;
+  }
+
+  .panel-blur {
+    @apply bg-white/80 backdrop-blur-2xl border border-slate-200/50;
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #f8f9fa;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
