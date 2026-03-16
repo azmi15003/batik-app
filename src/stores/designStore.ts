@@ -4,6 +4,7 @@ export interface Motif {
   id: string
   name: string
   url: string
+  category: 'heritage' | 'pattern' | 'unit'
 }
 
 export interface Palette {
@@ -16,10 +17,20 @@ export interface Palette {
 export const useDesignStore = defineStore('design', {
   state: () => ({
     motifs: [
-      { id: '1', name: 'Megamendung', url: '/motifs/megamendung.png' },
-      { id: '2', name: 'Garudan', url: '/motifs/garudan.png' },
-      { id: '3', name: 'Geometric', url: '/motifs/geometric.png' },
-      { id: '4', name: 'Fractal', url: '/motifs/fractal.png' },
+      // Heritage Components
+      { id: 'h1', name: 'Garuda Sawat', url: '/motifs/components/garuda.png', category: 'heritage' },
+      { id: 'h2', name: 'Mega Mendung', url: '/motifs/components/megamendung.png', category: 'heritage' },
+      
+      // Full Patterns
+      { id: 'p1', name: 'Classical Megamendung', url: '/motifs/megamendung.png', category: 'pattern' },
+      { id: 'p2', name: 'Garuda Tiled', url: '/motifs/garudan.png', category: 'pattern' },
+      { id: 'p3', name: 'Geometric Abstract', url: '/motifs/geometric.png', category: 'pattern' },
+      { id: 'p4', name: 'Fractal Modern', url: '/motifs/fractal.png', category: 'pattern' },
+      
+      // SVG Units
+      { id: 'u1', name: 'Kawung Unit', url: '/motifs/kawung.svg', category: 'unit' },
+      { id: 'u2', name: 'Parang Unit', url: '/motifs/parang.svg', category: 'unit' },
+      { id: 'u3', name: 'Truntum Unit', url: '/motifs/truntum.svg', category: 'unit' },
     ] as Motif[],
     palettes: [
       { 

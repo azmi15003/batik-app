@@ -3,19 +3,33 @@ import { onMounted, ref, watch, onUnmounted } from 'vue'
 import { Canvas, loadSVGFromURL, util, FabricImage, filters } from 'fabric'
 import { useRouter } from 'vue-router'
 import { useDesignStore } from '../stores/designStore'
+import VisualPreview from '../components/VisualPreview.vue'
+import TechnicalRuler from '../components/TechnicalRuler.vue'
 import { 
   Trash2, RotateCw, RotateCcw, 
   X,
-  ZoomIn, ZoomOut, Maximize,
-  Home, Palette as PaletteIcon, Layout, Library
+  Maximize,
+  Home, Palette as PaletteIcon, Layout, Library,
+  Settings2, Move, Info,
+  Eraser, Minus, Plus,
+  Menu as MenuIcon, ChevronRight
 } from 'lucide-vue-next'
-import VisualPreview from '../components/VisualPreview.vue'
 
 const designStore = useDesignStore()
 const router = useRouter()
 const canvasEl = ref<HTMLCanvasElement | null>(null)
 const canvasContainer = ref<HTMLElement | null>(null)
 let fabricCanvas: Canvas | null = null
+
+// Active Object Properties
+const activeProps = ref({
+  x: 0,
+  y: 0,
+  scale: 1,
+  rotation: 0,
+  opacity: 1
+})
+const hasActiveObject = ref(false)
 
 const showPreview = ref(false)
 const previewImage = ref('')
@@ -27,8 +41,8 @@ const handlePreview = () => {
   if (fabricCanvas) {
     previewImage.value = fabricCanvas.toDataURL({
       format: 'png',
-      quality: 0.8,
-      multiplier: 1
+      quality: 1,
+      multiplier: 3
     })
     showPreview.value = true
   }
@@ -66,6 +80,13 @@ onMounted(() => {
       backgroundColor: designStore.backgroundColor
     })
 
+    fabricCanvas.on('selection:created', (e) => updateActiveProps(e.selected[0]))
+    fabricCanvas.on('selection:updated', (e) => updateActiveProps(e.selected[0]))
+    fabricCanvas.on('selection:cleared', () => hasActiveObject.value = false)
+    fabricCanvas.on('object:moving', (e) => updateActiveProps(e.target))
+    fabricCanvas.on('object:scaling', (e) => updateActiveProps(e.target))
+    fabricCanvas.on('object:rotating', (e) => updateActiveProps(e.target))
+
     fabricCanvas.on('object:moving', (options) => {
       const grid = 20
       if (options.target) {
@@ -80,6 +101,36 @@ onMounted(() => {
     setTimeout(resizeCanvas, 100)
   }
 })
+
+const updateActiveProps = (obj: any) => {
+  if (!obj) return
+  hasActiveObject.value = true
+  activeProps.value = {
+    x: Math.round(obj.left),
+    y: Math.round(obj.top),
+    scale: Number(obj.scaleX.toFixed(2)),
+    rotation: Math.round(obj.angle),
+    opacity: Number(obj.opacity.toFixed(2))
+  }
+}
+
+const setObjProp = (prop: string, value: number) => {
+  if (!fabricCanvas) return
+  const obj = fabricCanvas.getActiveObject()
+  if (!obj) return
+  
+  if (prop === 'x') obj.set('left', value)
+  if (prop === 'y') obj.set('top', value)
+  if (prop === 'rotation') obj.rotate(value)
+  if (prop === 'scale') {
+    obj.set('scaleX', value)
+    obj.set('scaleY', value)
+  }
+  if (prop === 'opacity') obj.set('opacity', value)
+  
+  fabricCanvas.renderAll()
+  updateActiveProps(obj)
+}
 
 onUnmounted(() => {
   window.removeEventListener('resize', resizeCanvas)
@@ -100,26 +151,38 @@ watch(() => designStore.backgroundColor, (newColor) => {
   }
 })
 
-const addMotif = async (url: string) => {
+const addMotif = async (motif: any) => {
   if (!fabricCanvas) return
 
   try {
     let obj: any
-    if (url.toLowerCase().endsWith('.svg')) {
-      const { objects, options } = await loadSVGFromURL(url)
+    if (motif.url.toLowerCase().endsWith('.svg')) {
+      const { objects, options } = await loadSVGFromURL(motif.url)
       const validObjects = objects.filter((o): o is any => o !== null)
       obj = util.groupSVGElements(validObjects, options)
     } else {
-      obj = await FabricImage.fromURL(url)
-      // Base scale for images to fit well
-      obj.scaleToWidth(300)
+      obj = await FabricImage.fromURL(motif.url)
+      
+      // Intelligent scaling based on category
+      if (motif.category === 'pattern') {
+        obj.scaleToWidth(fabricCanvas.width!)
+      } else if (motif.category === 'heritage') {
+        obj.scaleToWidth(250) // Components are smaller
+      } else {
+        obj.scaleToWidth(150) // Units are smallest
+      }
     }
     
     obj.set({
       left: fabricCanvas.width! / 2,
       top: fabricCanvas.height! / 2,
       originX: 'center',
-      originY: 'center'
+      originY: 'center',
+      borderColor: '#3b4a8b',
+      cornerColor: '#3b4a8b',
+      cornerStyle: 'circle',
+      transparentCorners: false,
+      padding: 10
     })
     
     fabricCanvas.add(obj)
@@ -128,6 +191,15 @@ const addMotif = async (url: string) => {
     if (window.innerWidth < 1024) activePanel.value = ''
   } catch (err) {
     console.error('Error loading motif:', err)
+  }
+}
+
+const getCategoryTitle = (cat: string) => {
+  switch(cat) {
+    case 'heritage': return 'Heritage Components'
+    case 'pattern': return 'Full Patterns'
+    case 'unit': return 'Classic Units'
+    default: return 'Other Assets'
   }
 }
 
@@ -234,12 +306,17 @@ const togglePanel = (panel: string) => {
 
       <div class="flex items-center gap-2 lg:gap-4">
         <div class="hidden sm:flex items-center bg-slate-50 rounded-xl overflow-hidden border border-slate-200">
-          <button class="p-2 hover:bg-white text-slate-400 hover:text-[#3b4a8b] transition-all border-r border-slate-200" title="Undo"><RotateCcw class="w-4 h-4" /></button>
-          <button class="p-2 hover:bg-white text-slate-400 hover:text-[#3b4a8b] transition-all" title="Redo"><RotateCw class="w-4 h-4" /></button>
+          <button @click="clearCanvas" class="p-2 hover:bg-red-50 text-slate-400 hover:text-red-500 transition-all border-r border-slate-200" title="Clear Canvas"><Eraser class="w-4 h-4" /></button>
+          <button class="p-2 hover:bg-white text-slate-400 hover:text-indigo-600 transition-all border-r border-slate-200" title="Zoom Out"><Minus class="w-4 h-4" /></button>
+          <button class="p-2 hover:bg-white text-slate-400 hover:text-indigo-600 transition-all border-r border-slate-200" title="Zoom In"><Plus class="w-4 h-4" /></button>
+          <button class="p-2 hover:bg-white text-slate-400 hover:text-indigo-600 transition-all border-r border-slate-200" title="Reset Zoom"><Maximize class="w-4 h-4" /></button>
+          <button class="p-2 hover:bg-white text-slate-400 hover:text-slate-600 transition-all border-r border-slate-200" title="Undo"><RotateCcw class="w-4 h-4" /></button>
+          <button class="p-2 hover:bg-white text-slate-400 hover:text-slate-600 transition-all" title="Redo"><RotateCw class="w-4 h-4" /></button>
         </div>
         
-        <button @click="handlePreview" class="px-4 lg:px-8 py-2 bg-[#313a5b] hover:bg-[#3b4a8b] text-white rounded-xl text-[10px] lg:text-xs font-black transition-all shadow-lg active:scale-95 uppercase tracking-widest">
-          Make it!
+        <button @click="handlePreview" class="px-4 lg:px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-[10px] lg:text-xs font-black transition-all shadow-lg active:scale-95 uppercase tracking-widest flex items-center gap-2">
+          <span>Make it Real</span>
+          <Maximize class="w-3.5 h-3.5" />
         </button>
 
         <!-- Mobile Menu Toggle -->
@@ -280,168 +357,246 @@ const togglePanel = (panel: string) => {
     <div v-if="isMobileMenuOpen" @click="isMobileMenuOpen = false" class="md:hidden fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50"></div>
 
     <main class="flex-grow flex flex-col lg:flex-row relative overflow-hidden">
-      <!-- Side Panels: Adjusted for Mobile -->
+      <!-- Side Panels: Heritage Libs -->
       <transition 
         enter-active-class="transition ease-out duration-300 transform"
-        enter-from-class="-translate-x-full lg:-translate-x-full lg:opacity-0"
+        enter-from-class="-translate-x-full lg:opacity-0"
         enter-to-class="translate-x-0 lg:opacity-100"
         leave-active-class="transition ease-in duration-200 transform"
         leave-from-class="translate-x-0 lg:opacity-100"
-        leave-to-class="-translate-x-full lg:-translate-x-full lg:opacity-0"
+        leave-to-class="-translate-x-full lg:opacity-0"
       >
-        <aside v-if="activePanel !== ''" class="fixed lg:absolute inset-y-0 left-0 w-full lg:w-[420px] z-[70] lg:z-40 p-0 lg:p-6 bg-white lg:bg-transparent">
-          <div class="bg-white lg:bg-white/95 lg:backdrop-blur-xl h-full flex flex-col overflow-hidden lg:rounded-[32px] lg:shadow-2xl lg:shadow-slate-900/10 lg:border lg:border-slate-200 shadow-xl">
-            <!-- Header for Mobile Panel -->
-            <div class="lg:hidden p-4 border-b border-slate-100 flex items-center justify-between shrink-0">
-               <button @click="activePanel = ''" class="p-2 text-slate-400 hover:text-slate-600"><ChevronLeft class="w-6 h-6" /></button>
-               <span class="text-sm font-black uppercase tracking-widest text-slate-900">{{ activePanel }}</span>
-               <div class="w-10"></div>
-            </div>
-
-            <!-- Libs Panel -->
-            <div v-if="activePanel === 'libs'" class="flex flex-col h-full">
-              <div class="p-6 lg:p-8 pb-4 flex items-center justify-between shrink-0">
-                <div>
-                  <h3 class="text-lg lg:text-xl font-black text-slate-900">Motif Library</h3>
-                  <p class="text-[9px] lg:text-[10px] font-black text-[#c5a47e] uppercase tracking-[0.2em] mt-1">Heritage Assets</p>
-                </div>
-                <button @click="activePanel = ''" class="hidden lg:block p-2 hover:bg-slate-100 rounded-xl transition-colors text-slate-400"><X class="w-5 h-5" /></button>
-              </div>
-              <div class="flex-grow overflow-y-auto p-6 lg:p-8 pt-2 grid grid-cols-2 xs:grid-cols-3 lg:grid-cols-2 gap-4">
-                <div 
-                  v-for="motif in designStore.motifs" 
-                  :key="motif.id"
-                  @click="addMotif(motif.url)"
-                  class="aspect-square bg-slate-50 hover:bg-white rounded-[20px] lg:rounded-[24px] border border-slate-100 p-4 lg:p-6 flex flex-col items-center justify-center gap-2 lg:gap-3 transition-all cursor-pointer group hover:shadow-xl hover:border-[#3b4a8b]/20"
-                >
-                  <img :src="motif.url" class="w-16 lg:w-20 h-16 lg:h-20 group-hover:scale-110 transition-transform duration-500 opacity-60 group-hover:opacity-100" />
-                  <span class="text-[8px] lg:text-[9px] font-black uppercase tracking-widest text-slate-400 group-hover:text-slate-900 text-center truncate w-full">{{ motif.name }}</span>
-                </div>
-              </div>
-            </div>
-
-            <!-- Color Panel -->
-            <div v-if="activePanel === 'color'" class="flex flex-col h-full">
-              <div class="p-6 lg:p-8 pb-4 shrink-0">
-                <div class="flex items-center justify-between mb-6 lg:mb-8">
-                  <div class="flex items-center gap-1 bg-slate-50 p-1 rounded-xl border border-slate-100 shadow-inner">
-                    <button 
-                      @click="colorMode = 'motif'"
-                      :class="colorMode === 'motif' ? 'bg-white text-[#3b4a8b] shadow-sm' : 'text-slate-400'"
-                      class="px-4 lg:px-5 py-1.5 rounded-lg text-[9px] lg:text-[10px] font-black uppercase tracking-widest transition-all"
-                    >
-                      Motif
-                    </button>
-                    <button 
-                      @click="colorMode = 'latar'"
-                      :class="colorMode === 'latar' ? 'bg-white text-[#3b4a8b] shadow-sm' : 'text-slate-400'"
-                      class="px-4 lg:px-5 py-1.5 rounded-lg text-[9px] lg:text-[10px] font-black uppercase tracking-widest transition-all"
-                    >
-                      Latar
-                    </button>
+        <aside v-if="activePanel !== ''" class="fixed lg:relative inset-y-0 left-0 w-full lg:w-[380px] z-[70] lg:z-40 p-0 lg:p-4 bg-white lg:bg-transparent">
+          <div class="bg-white/95 backdrop-blur-xl h-full flex flex-col overflow-hidden lg:rounded-3xl lg:border lg:border-slate-200 shadow-2xl lg:shadow-none">
+            <!-- Motif Library Panel -->
+            <div v-if="activePanel === 'libs'" class="flex flex-col h-full overflow-hidden">
+               <div class="p-6 lg:p-8 pb-4 flex items-center justify-between shrink-0 border-b border-slate-100/50">
+                  <div>
+                    <h3 class="text-xs font-black text-slate-900 uppercase tracking-widest">Motif Library</h3>
+                    <p class="text-[8px] font-bold text-[#c5a47e] uppercase tracking-[0.2em] mt-1">Heritage Assets</p>
                   </div>
-                  <button @click="activePanel = ''" class="hidden lg:block p-2 hover:bg-slate-100 rounded-xl transition-colors text-slate-400"><X class="w-5 h-5" /></button>
-                </div>
-                <h3 class="text-lg lg:text-xl font-black text-slate-900 mb-4 lg:mb-6">Color Catalogue</h3>
-              </div>
-
-              <div class="flex-grow overflow-y-auto px-6 lg:px-8 space-y-4">
-                <div 
-                  v-for="palette in designStore.palettes" 
-                  :key="palette.id"
-                  @click="applyPalette(palette.colors)"
-                  class="bg-slate-50 hover:bg-white rounded-2xl p-4 border border-slate-100 transition-all cursor-pointer group flex gap-4 lg:gap-5 hover:shadow-lg hover:border-[#3b4a8b]/20"
-                >
-                  <div class="flex shrink-0 shadow-sm rounded-lg overflow-hidden border border-white">
-                     <div 
-                      v-for="(color, i) in palette.colors" 
-                      :key="i"
-                      class="w-8 lg:w-10 h-12 lg:h-16 transition-transform group-hover:scale-110"
-                      :style="{ backgroundColor: color }"
-                     ></div>
-                  </div>
-                  <div class="flex flex-col justify-center overflow-hidden">
-                    <h4 class="text-[11px] lg:text-xs font-black text-slate-900 group-hover:text-[#3b4a8b] transition-colors truncate">{{ palette.name }}</h4>
-                    <p class="text-[9px] font-bold text-slate-400 uppercase tracking-tighter mt-1 line-clamp-1">{{ palette.description }}</p>
-                  </div>
-                </div>
-              </div>
-
-              <div class="p-6 lg:p-8 bg-slate-50 border-t border-slate-100 shrink-0">
-                <div class="flex items-center justify-between mb-4">
-                  <span class="text-[9px] lg:text-[10px] font-black text-slate-400 uppercase tracking-widest">Recent Colors</span>
-                  <button @click="designStore.clearHistory" class="text-[8px] lg:text-[9px] font-black text-[#c5a47e] uppercase">Clear</button>
-                </div>
-                <div class="flex flex-wrap gap-2">
-                  <div 
-                    v-for="color in designStore.colorHistory" 
-                    :key="color"
-                    @click="applyPalette([color])"
-                    class="w-8 lg:w-9 h-8 lg:h-9 rounded-xl border border-white cursor-pointer hover:scale-110 transition-transform shadow-sm"
-                    :style="{ backgroundColor: color }"
-                  ></div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Layout/Size Panel -->
-            <div v-if="activePanel === 'layout'" class="flex flex-col h-full overflow-hidden">
-              <div class="p-6 lg:p-8 flex flex-col h-full">
-                <div class="hidden lg:flex items-center justify-between mb-8 shrink-0">
-                  <h3 class="text-lg font-black text-slate-900 uppercase tracking-tight">Product Canvas</h3>
                   <button @click="activePanel = ''" class="p-2 hover:bg-slate-100 rounded-xl transition-colors text-slate-400"><X class="w-5 h-5" /></button>
+               </div>
+               <div class="flex-grow overflow-y-auto p-6 lg:p-8 pt-4 space-y-6">
+                <div v-for="category in ['heritage', 'unit', 'pattern']" :key="category" class="space-y-4">
+                  <div class="flex items-center gap-2">
+                    <span class="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">{{ getCategoryTitle(category) }}</span>
+                    <div class="flex-grow h-px bg-slate-100"></div>
+                  </div>
+                  <div class="grid grid-cols-2 gap-3 pb-2">
+                    <div 
+                      v-for="motif in designStore.motifs.filter(m => m.category === category)" 
+                      :key="motif.id"
+                      @click="addMotif(motif)"
+                      class="aspect-square bg-slate-50 border border-slate-100 p-4 rounded-3xl flex flex-col items-center justify-center gap-3 hover:border-indigo-600/30 hover:bg-white hover:shadow-lg transition-all cursor-pointer group"
+                    >
+                      <div class="w-12 h-12 flex items-center justify-center">
+                        <img :src="motif.url" class="max-w-full max-h-full object-contain group-hover:scale-110 transition-transform duration-500 opacity-70 group-hover:opacity-100" />
+                      </div>
+                      <span class="text-[7px] font-black uppercase text-center tracking-widest text-slate-400 group-hover:text-slate-900 truncate w-full px-1">{{ motif.name }}</span>
+                    </div>
+                  </div>
                 </div>
-                
-                <div class="space-y-3 lg:space-y-4 flex-grow overflow-y-auto pr-2">
+               </div>
+            </div>
+            <!-- Color Panel -->
+            <div v-if="activePanel === 'color'" class="flex flex-col h-full overflow-hidden">
+               <div class="p-6 lg:p-8 pb-4 shrink-0 flex items-center justify-between">
+                  <div>
+                    <h3 class="text-sm font-black text-slate-900 uppercase tracking-widest">Color Catalogue</h3>
+                    <div class="flex items-center gap-1 mt-4 bg-slate-50 p-1 rounded-xl border border-slate-200">
+                      <button @click="colorMode = 'motif'" :class="colorMode === 'motif' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400'" class="px-3 py-1.5 rounded-lg text-[8px] font-black uppercase tracking-widest transition-all">Motif</button>
+                      <button @click="colorMode = 'latar'" :class="colorMode === 'latar' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400'" class="px-3 py-1.5 rounded-lg text-[8px] font-black uppercase tracking-widest transition-all">Latar</button>
+                    </div>
+                  </div>
+                  <button @click="activePanel = ''" class="p-2 hover:bg-slate-100 rounded-xl transition-colors text-slate-400"><X class="w-5 h-5" /></button>
+               </div>
+               
+               <div class="flex-grow overflow-y-auto p-6 lg:p-8 pt-2 space-y-4">
+                  <div 
+                    v-for="palette in designStore.palettes" 
+                    :key="palette.id"
+                    @click="applyPalette(palette.colors)"
+                    class="bg-slate-50 hover:bg-white border border-slate-100 p-4 rounded-2xl flex gap-4 cursor-pointer group transition-all"
+                  >
+                    <div class="flex shrink-0 shadow-sm rounded-lg overflow-hidden border border-white">
+                       <div v-for="(color, i) in palette.colors" :key="i" class="w-6 h-10 group-hover:scale-110 transition-transform" :style="{ backgroundColor: color }"></div>
+                    </div>
+                    <div class="flex flex-col justify-center">
+                      <h4 class="text-[10px] font-black text-slate-900 group-hover:text-indigo-600">{{ palette.name }}</h4>
+                      <p class="text-[8px] font-bold text-slate-400 uppercase tracking-tighter mt-1">{{ palette.description }}</p>
+                    </div>
+                  </div>
+               </div>
+
+               <div class="p-6 lg:p-8 bg-slate-50 border-t border-slate-100">
+                  <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-4">Recent Colors</span>
+                  <div class="flex flex-wrap gap-2">
+                    <div 
+                      v-for="color in designStore.colorHistory" 
+                      :key="color"
+                      @click="applyPalette([color])"
+                      class="w-8 h-8 rounded-xl border border-white cursor-pointer hover:scale-110 transition-all"
+                      :style="{ backgroundColor: color }"
+                    ></div>
+                  </div>
+               </div>
+            </div>
+
+            <!-- Layout Panel -->
+            <div v-if="activePanel === 'layout'" class="flex flex-col h-full overflow-hidden">
+               <div class="p-6 lg:p-8 pb-4 shrink-0 flex items-center justify-between">
+                  <h3 class="text-sm font-black text-slate-900 uppercase tracking-widest">Canvas Scale</h3>
+                  <button @click="activePanel = ''" class="p-2 hover:bg-slate-100 rounded-xl transition-colors text-slate-400"><X class="w-5 h-5" /></button>
+               </div>
+               <div class="flex-grow overflow-y-auto p-6 lg:p-8 pt-2 space-y-3">
                   <button 
                     v-for="size in canvasSizes" :key="size.name"
                     @click="selectedSize = size"
-                    :class="selectedSize.name === size.name ? 'border-[#3b4a8b] bg-[#3b4a8b]/5 text-[#3b4a8b] ring-2 ring-[#3b4a8b]/10' : 'border-slate-100 bg-slate-50 text-slate-400'"
-                    class="w-full flex items-center justify-between p-5 lg:p-6 rounded-2xl border transition-all text-left shadow-sm"
+                    :class="selectedSize.name === size.name ? 'border-indigo-600 bg-indigo-50 text-indigo-600' : 'border-slate-100 bg-slate-50 text-slate-400'"
+                    class="w-full flex items-center justify-between p-4 rounded-2xl border transition-all text-left"
                   >
                     <div>
-                      <p class="text-xs lg:text-sm font-black">{{ size.name }}</p>
-                      <p class="text-[9px] lg:text-[10px] font-bold opacity-60 uppercase mt-1">{{ size.width }}x{{ size.height }} PX</p>
+                      <p class="text-[11px] font-black">{{ size.name }}</p>
+                      <p class="text-[8px] font-bold opacity-60 uppercase mt-0.5">{{ size.width }}x{{ size.height }} PX</p>
                     </div>
-                    <div v-if="selectedSize.name === size.name" class="w-2.5 lg:w-3 h-2.5 lg:h-3 bg-[#3b4a8b] rounded-full shadow-lg shadow-[#3b4a8b]/30"></div>
+                    <div v-if="selectedSize.name === size.name" class="w-2 h-2 bg-indigo-600 rounded-full"></div>
                   </button>
-                </div>
-              </div>
+               </div>
             </div>
           </div>
         </aside>
       </transition>
 
-      <!-- Main Canvas Area -->
-      <section ref="canvasContainer" class="flex-grow flex items-center justify-center p-4 lg:p-12 relative overflow-hidden bg-[#e0e3e9]">
-        <!-- Grid Background -->
-        <div class="absolute inset-0 opacity-[0.03] pointer-events-none" style="background-image: radial-gradient(#3b4a8b 1px, transparent 1px); background-size: 32px 32px;"></div>
-
-        <!-- Float Toolbar: Optimized for touch -->
-        <div class="absolute top-6 lg:top-8 flex items-center bg-white/90 backdrop-blur-xl border border-slate-200 px-3 lg:px-4 py-1.5 lg:py-2 rounded-2xl shadow-2xl gap-2 lg:gap-3 z-30 animate-in slide-in-from-top-4">
-          <button @click="rotateSelected" class="p-2.5 hover:bg-slate-50 rounded-xl text-slate-400 hover:text-slate-900 transition-all border border-transparent hover:border-slate-100" title="Rotate"><RotateCw class="w-4.5 lg:w-5 h-4.5 lg:h-5" /></button>
-          <button @click="deleteSelected" class="p-2.5 hover:bg-red-50 text-red-400 rounded-xl transition-all border border-transparent hover:border-red-100" title="Delete"><Trash2 class="w-4.5 lg:w-5 h-4.5 lg:h-5" /></button>
-          <div class="w-px h-5 lg:h-6 bg-slate-200 mx-1"></div>
-          <button @click="clearCanvas" class="px-2 lg:px-4 py-1 lg:py-2 text-[9px] lg:text-[10px] font-black text-slate-400 hover:text-slate-900 transition-all uppercase tracking-widest">Reset</button>
-        </div>
-
-        <!-- Canvas Wrapper for scaling -->
-        <div class="relative bg-white shadow-[0_32px_64px_-16px_rgba(0,0,0,0.1)] rounded-xl overflow-hidden border border-slate-200 origin-center transition-transform duration-300 canvas-container">
-          <canvas ref="canvasEl"></canvas>
-        </div>
-
-        <!-- Canvas Controls (Bottom Right on Desktop, Bottom Left on Mobile) -->
-        <div class="absolute bottom-6 left-6 md:left-auto md:right-8 lg:bottom-10 lg:right-10 flex md:flex-col bg-white border border-slate-200 rounded-xl lg:rounded-2xl shadow-2xl overflow-hidden z-30">
-          <button class="p-3 lg:p-3.5 hover:bg-slate-50 text-slate-400 hover:text-[#3b4a8b] transition-all"><ZoomIn class="w-5 h-5" /></button>
-          <button class="p-3 lg:p-3.5 hover:bg-slate-50 text-slate-400 hover:text-[#3b4a8b] transition-all border-l md:border-l-0 md:border-t border-slate-100"><ZoomOut class="w-5 h-5" /></button>
-          <button @click="resizeCanvas" class="p-3 lg:p-3.5 hover:bg-slate-50 text-slate-400 hover:text-[#3b4a8b] border-l md:border-l-0 md:border-t border-slate-100 transition-all"><Maximize class="w-4.5 h-4.5" /></button>
-        </div>
-
-        <!-- Mobile Hint -->
-        <div class="absolute bottom-6 right-6 md:hidden p-3 bg-white/80 rounded-full border border-slate-200 shadow-lg text-[#3b4a8b] animate-bounce">
-           <Library class="w-5 h-5" @click="togglePanel('libs')" />
+      <!-- Main Pro Workspace -->
+      <section class="flex-grow flex flex-col relative overflow-hidden bg-slate-100">
+        <!-- Rulers Layout Wrapper -->
+        <div class="flex-grow flex flex-col">
+          <!-- Horizontal Ruler -->
+          <div class="flex shrink-0">
+            <div class="w-6 h-6 bg-slate-50 border-r border-b border-slate-200 shrink-0 flex items-center justify-center"><div class="w-1 h-1 rounded-full bg-slate-300"></div></div>
+            <TechnicalRuler 
+              orientation="horizontal" 
+              :size="selectedSize.width" 
+              :scale="1" 
+              class="flex-grow"
+            />
+          </div>
+          
+          <div class="flex flex-grow relative overflow-hidden">
+            <!-- Vertical Ruler -->
+            <TechnicalRuler 
+              orientation="vertical" 
+              :size="selectedSize.height" 
+              :scale="1" 
+              class="shrink-0"
+            />
+            
+            <!-- Technical Canvas Area -->
+            <div ref="canvasContainer" class="flex-grow flex items-center justify-center p-12 bg-slate-200/50 relative overflow-hidden">
+              <div class="absolute inset-0 opacity-[0.05]" style="background-image: linear-gradient(#000 1px, transparent 1px), linear-gradient(90deg, #000 1px, transparent 1px); background-size: 40px 40px;"></div>
+              
+              <!-- Canvas Wrapper -->
+              <div class="relative bg-white shadow-2xl rounded-sm ring-1 ring-slate-300 overflow-hidden canvas-container transition-transform">
+                <canvas ref="canvasEl"></canvas>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
+
+      <!-- Property Sheet (Pro Sidebar Right) -->
+      <aside class="hidden xl:flex w-[300px] bg-white border-l border-slate-200 flex-col shadow-inner">
+        <div class="p-6 border-b border-slate-100 bg-slate-50/50">
+           <div class="flex items-center gap-2 mb-1">
+             <Settings2 class="w-4 h-4 text-indigo-600" />
+             <h3 class="text-xs font-black uppercase tracking-widest text-slate-800">Property Sheet</h3>
+           </div>
+           <p class="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Instance Inspector</p>
+        </div>
+        
+        <div class="flex-grow overflow-y-auto">
+          <!-- Selection Details -->
+          <div v-if="hasActiveObject" class="p-6 space-y-6">
+            <!-- Transform Section -->
+            <div class="space-y-4">
+               <div class="flex items-center gap-2">
+                 <div class="w-1.5 h-1.5 rounded-full bg-indigo-500"></div>
+                 <span class="text-[9px] font-black uppercase tracking-widest text-slate-400">Transform</span>
+               </div>
+               <div class="grid grid-cols-2 gap-3">
+                 <div class="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                    <span class="block text-[8px] font-black text-slate-400 mb-1">X POS</span>
+                    <input type="number" v-model="activeProps.x" @input="setObjProp('x', activeProps.x)" class="bg-transparent text-xs font-black w-full outline-none" />
+                 </div>
+                 <div class="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                    <span class="block text-[8px] font-black text-slate-400 mb-1">Y POS</span>
+                    <input type="number" v-model="activeProps.y" @input="setObjProp('y', activeProps.y)" class="bg-transparent text-xs font-black w-full outline-none" />
+                 </div>
+                 <div class="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                    <span class="block text-[8px] font-black text-slate-400 mb-1">SCALE</span>
+                    <input type="number" step="0.1" v-model="activeProps.scale" @input="setObjProp('scale', activeProps.scale)" class="bg-transparent text-xs font-black w-full outline-none" />
+                 </div>
+                 <div class="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                    <span class="block text-[8px] font-black text-slate-400 mb-1">ROTATE</span>
+                    <input type="number" v-model="activeProps.rotation" @input="setObjProp('rotation', activeProps.rotation)" class="bg-transparent text-xs font-black w-full outline-none" />
+                 </div>
+               </div>
+            </div>
+
+            <!-- Appearance Section -->
+            <div class="space-y-4">
+               <div class="flex items-center gap-2">
+                 <div class="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
+                 <span class="text-[9px] font-black uppercase tracking-widest text-slate-400">Appearance</span>
+               </div>
+               <div class="bg-slate-50 p-4 rounded-xl border border-slate-100">
+                 <div class="flex items-center justify-between mb-4">
+                    <span class="text-[8px] font-black text-slate-400">OPACITY</span>
+                    <span class="text-[10px] font-black text-indigo-600">{{ Math.round(activeProps.opacity * 100) }}%</span>
+                 </div>
+                 <input type="range" min="0" max="1" step="0.1" v-model="activeProps.opacity" @input="setObjProp('opacity', activeProps.opacity)" class="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600" />
+               </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="grid grid-cols-2 gap-2 pt-4">
+              <button @click="rotateSelected" class="flex flex-col items-center justify-center p-4 bg-slate-50 rounded-2xl hover:bg-slate-100 text-slate-400 hover:text-indigo-600 transition-all border border-slate-100">
+                <RotateCw class="w-5 h-5 mb-2" />
+                <span class="text-[8px] font-black uppercase">Rotate 90</span>
+              </button>
+              <button @click="deleteSelected" class="flex flex-col items-center justify-center p-4 bg-red-50 rounded-2xl hover:bg-red-100 text-red-400 transition-all border border-red-100">
+                <Trash2 class="w-5 h-5 mb-2" />
+                <span class="text-[8px] font-black uppercase tracking-widest">Delete</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Empty State -->
+          <div v-else class="h-full flex flex-col items-center justify-center p-8 text-center opacity-40">
+             <div class="w-16 h-16 bg-slate-100 rounded-3xl flex items-center justify-center mb-6 border border-slate-200">
+               <Move class="w-8 h-8 text-slate-400" />
+             </div>
+             <p class="text-[10px] font-black uppercase tracking-widest text-slate-400">No Element Selected</p>
+             <p class="text-[9px] font-bold text-slate-400 mt-2">Select an object to edit its properties</p>
+          </div>
+        </div>
+
+        <!-- Global Stats Footer -->
+        <div class="p-6 bg-slate-50 border-t border-slate-100 space-y-3">
+           <div class="flex justify-between items-center text-[9px] font-black uppercase tracking-widest text-slate-400">
+              <span>Canvas Status</span>
+              <span class="text-emerald-500 flex items-center gap-1"><div class="w-1 h-1 rounded-full bg-emerald-500"></div> Optimized</span>
+           </div>
+           <div class="bg-indigo-600 text-white p-3 rounded-xl flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <Info class="w-3 h-3" />
+                <span class="text-[8px] font-black uppercase tracking-widest">Auto-saved</span>
+              </div>
+              <span class="text-[8px] font-black">12:30 PM</span>
+           </div>
+        </div>
+      </aside>
     </main>
 
     <VisualPreview 

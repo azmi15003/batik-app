@@ -111,9 +111,9 @@ const goToCheckout = () => {
             class="absolute inset-0 transition-transform duration-75 ease-out will-change-transform" 
             :style="{ 
               backgroundImage: `url(${imageUrl})`, 
-              backgroundSize: `${150 * scale}px ${150 * scale}px`,
-              backgroundRepeat: 'repeat',
-              backgroundPosition: `${position.x}px ${position.y}px`
+              backgroundSize: `${800 * scale}px auto`,
+              backgroundRepeat: 'no-repeat',
+              backgroundPosition: `calc(50% + ${position.x}px) calc(50% + ${position.y}px)`
             }"
           >
             <!-- Overlay texture -->
